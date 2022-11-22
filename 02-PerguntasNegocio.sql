@@ -66,6 +66,14 @@ WHERE EXTRACT(HOUR FROM data_fim) BETWEEN 07 AND 11;
 # outro, considerando data de início do aluguel e estação de início?
 # A data de início deve ser retornada no formato: Sat/Jan/12 00:00:00 (Sat = Dia da semana
 # abreviado e Jan igual mês abreviado). Retornar os dados para os aluguéis entre 01 e 03 da manhã	
+SELECT
+	estacao_inicio,
+    DATE_FORMAT(data_inicio, "%a/%b/%y %H:%i:%S") data_inicio,
+    duracao_segundos - LAG(duracao_segundos, 1) OVER(PARTITION BY estacao_inicio 
+			ORDER BY CAST(data_inicio AS DATE)) diferenca
+FROM bikeshare.tb_bikes2
+WHERE EXTRACT(HOUR FROM data_inicio) BETWEEN 01 AND 03;
+    
 
 # 9- Retornar:
 # Estação fim, data fim e duração em segundos do aluguel
@@ -73,7 +81,25 @@ WHERE EXTRACT(HOUR FROM data_fim) BETWEEN 07 AND 11;
 # Queremos os registros divididos em 4 grupos ao longo do tempo por partição
 # Retornar os dados para os aluguéis entre 8 e 10 da manhã
 # Qual critério usado pela função NTILE para dividir os grupos?
+SELECT 
+	estacao_fim, 
+    DATE_FORMAT(data_fim, "%d/%M%Y %H:%i:%S") data_fim,
+    duracao_segundos,
+    NTILE(4) OVER(PARTITION BY estacao_fim ORDER BY CAST(data_fim AS DATE)) 
+FROM bikeshare.tb_bikes2
+WHERE EXTRACT(HOUR FROM data_fim) BETWEEN 08 AND 11;
 
 # 10- Quais estações tiveram mais de 35 horas de duração total do aluguel de bike ao longo do
 # tempo considerando a data fim e estação fim?
 # Retorne os dados entre os dias '2012-04-01' e '2012-04-02'
+SELECT * 
+FROM
+(SELECT 
+	estacao_fim,
+    CAST(data_fim AS DATE) data_fim,
+    SUM(duracao_segundos/60/60) OVER(PARTITION BY estacao_fim ORDER BY CAST(data_fim AS DATE)) duracao
+FROM bikeshare.tb_bikes2
+WHERE data_fim BETWEEN '2012-04-01' AND '2012-04-02') tabela1
+WHERE tabela1.duracao > 35
+ORDER BY tabela1.duracao;
+
